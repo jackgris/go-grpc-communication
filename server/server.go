@@ -21,7 +21,7 @@ import (
 
 	"google.golang.org/grpc/credentials"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/jackgris/go-grpc-communication/data"
 	pb "github.com/jackgris/go-grpc-communication/routeguide"
@@ -221,7 +221,10 @@ func main() {
 	}
 	grpcServer := grpc.NewServer(opts...)
 	pb.RegisterRouteGuideServer(grpcServer, newServer())
-	grpcServer.Serve(lis)
+	err = grpcServer.Serve(lis)
+	if err != nil {
+		log.Fatalf("Fail while server running: %v", err)
+	}
 }
 
 // exampleData is a copy of testdata/route_guide_db.json. It's to avoid
