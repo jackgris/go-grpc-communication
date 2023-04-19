@@ -24,7 +24,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/jackgris/go-grpc-communication/data"
-	pb "github.com/jackgris/go-grpc-communication/routeguide"
+	pb "github.com/jackgris/go-grpc-communication/personguide"
 )
 
 var (
