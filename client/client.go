@@ -9,11 +9,10 @@ import (
 	"flag"
 	"io"
 	"log"
-	"math/rand"
 	"time"
 
 	"github.com/jackgris/go-grpc-communication/data"
-	pb "github.com/jackgris/go-grpc-communication/routeguide"
+	pb "github.com/jackgris/go-grpc-communication/personguide"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -27,82 +26,82 @@ var (
 )
 
 // printFeature gets the feature for the given point.
-func printFeature(client pb.RouteGuideClient, point *pb.Point) {
-	log.Printf("Getting feature for point (%d, %d)", point.Latitude, point.Longitude)
+func printPhone(client pb.PersonGuideClient, person *pb.Person) {
+	log.Printf("Getting phone from person %s", person.GetName())
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	feature, err := client.GetFeature(ctx, point)
+	phone, err := client.GetPhone(ctx, person)
 	if err != nil {
-		log.Fatalf("client.GetFeature failed: %v", err)
+		log.Fatalf("client.GetPhone failed: %v", err)
 	}
-	log.Println(feature)
+	log.Println(phone)
 }
 
 // printFeatures lists all the features within the given bounding Rectangle.
-func printFeatures(client pb.RouteGuideClient, rect *pb.Rectangle) {
-	log.Printf("Looking for features within %v", rect)
+func printPersons(client pb.PersonGuideClient, adress *pb.Adress) {
+	log.Printf("Looking for persons in adress %s", adress.GetName())
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	stream, err := client.ListFeatures(ctx, rect)
+	stream, err := client.ListPersons(ctx, adress)
 	if err != nil {
-		log.Fatalf("client.ListFeatures failed: %v", err)
+		log.Fatalf("client.ListPersons failed: %v", err)
 	}
 	for {
-		feature, err := stream.Recv()
+		person, err := stream.Recv()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			log.Fatalf("client.ListFeatures failed: %v", err)
+			log.Fatalf("client.ListPersons failed: %v", err)
 		}
-		log.Printf("Feature: name: %q, point:(%v, %v)", feature.GetName(),
-			feature.GetLocation().GetLatitude(), feature.GetLocation().GetLongitude())
+		log.Printf("Person: name: %s, email:%s, Id: %d\n", person.GetName(),
+			person.GetEmail(), person.GetId())
 	}
 }
 
+var phones = []*pb.PhoneNumber{
+	{Number: "1234", Type: pb.PhoneType_HOME},
+	{Number: "4321", Type: pb.PhoneType_WORK},
+	{Number: "4312", Type: pb.PhoneType_MOBILE},
+}
+
+var persons = []pb.Person{
+	{Name: "Juan", Id: 1, Email: "juan@gmail.com", Phones: phones},
+	{Name: "Gabriel", Id: 2, Email: "gabriel@gmail.com", Phones: phones},
+	{Name: "Albert", Id: 3, Email: "albert@gmail.com", Phones: phones},
+	{Name: "Mark", Id: 4, Email: "mark@gmail.com", Phones: phones},
+	{Name: "Brian", Id: 5, Email: "brian@gmail.com", Phones: phones},
+	{Name: "Kevin", Id: 6, Email: "kevin@gmail.com", Phones: phones},
+}
+
 // runRecordRoute sends a sequence of points to server and expects to get a RouteSummary from server.
-func runRecordRoute(client pb.RouteGuideClient) {
-	// Create a random number of random points
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	pointCount := int(r.Int31n(100)) + 2 // Traverse at least two points
-	var points []*pb.Point
-	for i := 0; i < pointCount; i++ {
-		points = append(points, randomPoint(r))
-	}
-	log.Printf("Traversing %d points.", len(points))
+func runRecordPersons(client pb.PersonGuideClient) {
+	log.Printf("Traversing %d persons.", len(persons))
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	stream, err := client.RecordRoute(ctx)
+	stream, err := client.RecordPersons(ctx)
 	if err != nil {
-		log.Fatalf("client.RecordRoute failed: %v", err)
+		log.Fatalf("client.RecordPersons failed: %v", err)
 	}
-	for _, point := range points {
-		if err := stream.Send(point); err != nil {
-			log.Fatalf("client.RecordRoute: stream.Send(%v) failed: %v", point, err)
+	for _, person := range persons {
+		if err := stream.Send(&person); err != nil {
+			log.Fatalf("client.RecordPersons: stream.Send(%v) failed: %v", person, err)
 		}
 	}
 	reply, err := stream.CloseAndRecv()
 	if err != nil {
-		log.Fatalf("client.RecordRoute failed: %v", err)
+		log.Fatalf("client.RecordPersons failed: %v", err)
 	}
-	log.Printf("Route summary: %v", reply)
+	log.Printf("AdressBook summary: %v", reply)
 }
 
 // runRouteChat receives a sequence of route notes, while sending notes for various locations.
-func runRouteChat(client pb.RouteGuideClient) {
-	notes := []*pb.RouteNote{
-		{Location: &pb.Point{Latitude: 0, Longitude: 1}, Message: "First message"},
-		{Location: &pb.Point{Latitude: 0, Longitude: 2}, Message: "Second message"},
-		{Location: &pb.Point{Latitude: 0, Longitude: 3}, Message: "Third message"},
-		{Location: &pb.Point{Latitude: 0, Longitude: 1}, Message: "Fourth message"},
-		{Location: &pb.Point{Latitude: 0, Longitude: 2}, Message: "Fifth message"},
-		{Location: &pb.Point{Latitude: 0, Longitude: 3}, Message: "Sixth message"},
-	}
+func runRoutePhones(client pb.PersonGuideClient) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	stream, err := client.RouteChat(ctx)
+	stream, err := client.RoutePhones(ctx)
 	if err != nil {
-		log.Fatalf("client.RouteChat failed: %v", err)
+		log.Fatalf("client.RoutePhones failed: %v", err)
 	}
 	waitc := make(chan struct{})
 	go func() {
@@ -114,24 +113,18 @@ func runRouteChat(client pb.RouteGuideClient) {
 				return
 			}
 			if err != nil {
-				log.Fatalf("client.RouteChat failed: %v", err)
+				log.Fatalf("client.RoutePhones failed: %v", err)
 			}
-			log.Printf("Got message %s at point(%d, %d)", in.Message, in.Location.Latitude, in.Location.Longitude)
+			log.Printf("Got phone %s type %v", in.Number, in.Type)
 		}
 	}()
-	for _, note := range notes {
-		if err := stream.Send(note); err != nil {
-			log.Fatalf("client.RouteChat: stream.Send(%v) failed: %v", note, err)
+	for _, person := range persons {
+		if err := stream.Send(&person); err != nil {
+			log.Fatalf("client.RoutePhones: stream.Send(%v) failed: %v", person, err)
 		}
 	}
 	stream.CloseSend()
 	<-waitc
-}
-
-func randomPoint(r *rand.Rand) *pb.Point {
-	lat := (r.Int31n(180) - 90) * 1e7
-	long := (r.Int31n(360) - 180) * 1e7
-	return &pb.Point{Latitude: lat, Longitude: long}
 }
 
 func main() {
@@ -156,7 +149,7 @@ func main() {
 	}
 	defer conn.Close()
 	client := pb.NewRouteGuideClient(conn)
-
+	// https://protobuf.dev/getting-started/gotutorial/
 	// Looking for a valid feature
 	printFeature(client, &pb.Point{Latitude: 409146138, Longitude: -746188906})
 
