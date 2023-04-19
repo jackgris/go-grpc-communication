@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+option go_package = "github.com/jackgris/go-grpc-communication/personguide";
+// option java_multiple_files = true;
+// option java_package = "io.grpc.examples.routeguide";
+// option java_outer_classname = "RouteGuideProto";
+
+package personguide;
+
+import "google/protobuf/timestamp.proto";
+
+// Interface exported by the server.
+service PersonGuide {
+  // A simple RPC.
+  //
+  // Obtains the first phone saved at the given person.
+  //
+  // A feature with an empty name is returned if there's no feature at the given
+  // position.
+  rpc GetPhone(Person) returns (PhoneNumber) {}
+
+  // A server-to-client streaming RPC.
+  //
+  // Obtains the Features available within the given Rectangle.  Results are
+  // streamed rather than returned at once (e.g. in a response message with a
+  // repeated field), as the rectangle may cover a large area and contain a
+  // huge number of features.
+  rpc ListPersons(Adress) returns (stream Person) {}
+
+  // A client-to-server streaming RPC.
+  //
+  // Accepts a stream of Points on a route being traversed, returning a
+  // RouteSummary when traversal is completed.
+  rpc RecordPersons(stream Person) returns (AddressBook) {}
+
+  // A Bidirectional streaming RPC.
+  //
+  // Accepts a stream of RouteNotes sent while a route is being traversed,
+  // while receiving other RouteNotes (e.g. from other users).
+  rpc RoutePhones(stream Person) returns (stream PhoneNumber) {}
+}
+
+message Person {
+  string name = 1;
+  int32 id = 2;  // Unique ID number for this person.
+  string email = 3;
+
+  repeated PhoneNumber phones = 4;
+
+  google.protobuf.Timestamp last_updated = 5;
+}
+
+
+enum PhoneType {
+  MOBILE = 0;
+  HOME = 1;
+  WORK = 2;
+}
+
+message PhoneNumber {
+  string number = 1;
+  PhoneType type = 2;
+}
+
+// Our address book file is just one of these.
+message AddressBook {
+  repeated Person people = 1;
+}
+
+message Adress {
+  string name = 1;
+}
