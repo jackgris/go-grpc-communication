@@ -59,21 +59,6 @@ func printPersons(client pb.PersonGuideClient, adress *pb.Adress) {
 	}
 }
 
-var phones = []*pb.PhoneNumber{
-	{Number: "1234", Type: pb.PhoneType_HOME},
-	{Number: "4321", Type: pb.PhoneType_WORK},
-	{Number: "4312", Type: pb.PhoneType_MOBILE},
-}
-
-var persons = []pb.Person{
-	{Name: "Juan", Id: 1, Email: "juan@gmail.com", Phones: phones},
-	{Name: "Gabriel", Id: 2, Email: "gabriel@gmail.com", Phones: phones},
-	{Name: "Albert", Id: 3, Email: "albert@gmail.com", Phones: phones},
-	{Name: "Mark", Id: 4, Email: "mark@gmail.com", Phones: phones},
-	{Name: "Brian", Id: 5, Email: "brian@gmail.com", Phones: phones},
-	{Name: "Kevin", Id: 6, Email: "kevin@gmail.com", Phones: phones},
-}
-
 // runRecordRoute sends a sequence of points to server and expects to get a RouteSummary from server.
 func runRecordPersons(client pb.PersonGuideClient) {
 	log.Printf("Traversing %d persons.", len(persons))
@@ -83,9 +68,9 @@ func runRecordPersons(client pb.PersonGuideClient) {
 	if err != nil {
 		log.Fatalf("client.RecordPersons failed: %v", err)
 	}
-	for _, person := range persons {
-		if err := stream.Send(&person); err != nil {
-			log.Fatalf("client.RecordPersons: stream.Send(%v) failed: %v", person, err)
+	for p := range persons {
+		if err := stream.Send(&persons[p]); err != nil {
+			log.Fatalf("client.RecordPersons: stream.Send(%v) failed: %v", &persons[p], err)
 		}
 	}
 	reply, err := stream.CloseAndRecv()
@@ -118,9 +103,9 @@ func runRoutePhones(client pb.PersonGuideClient) {
 			log.Printf("Got phone %s type %v", in.Number, in.Type)
 		}
 	}()
-	for _, person := range persons {
-		if err := stream.Send(&person); err != nil {
-			log.Fatalf("client.RoutePhones: stream.Send(%v) failed: %v", person, err)
+	for p := range persons {
+		if err := stream.Send(&persons[p]); err != nil {
+			log.Fatalf("client.RoutePhones: stream.Send(%v) failed: %v", &persons[p], err)
 		}
 	}
 	stream.CloseSend()
@@ -148,23 +133,33 @@ func main() {
 		log.Fatalf("fail to dial: %v", err)
 	}
 	defer conn.Close()
-	client := pb.NewRouteGuideClient(conn)
+	client := pb.NewPersonGuideClient(conn)
 	// https://protobuf.dev/getting-started/gotutorial/
-	// Looking for a valid feature
-	printFeature(client, &pb.Point{Latitude: 409146138, Longitude: -746188906})
 
-	// Feature missing.
-	printFeature(client, &pb.Point{Latitude: 0, Longitude: 0})
+	runRecordPersons(client)
 
-	// Looking for features between 40, -75 and 42, -73.
-	printFeatures(client, &pb.Rectangle{
-		Lo: &pb.Point{Latitude: 400000000, Longitude: -750000000},
-		Hi: &pb.Point{Latitude: 420000000, Longitude: -730000000},
-	})
+	runRoutePhones(client)
 
-	// RecordRoute
-	runRecordRoute(client)
+	for p := range persons {
+		printPhone(client, &persons[p])
+	}
 
-	// RouteChat
-	runRouteChat(client)
+	adress := pb.Adress{Name: "my adress"}
+	printPersons(client, &adress)
+}
+
+// Example data
+var phones = []*pb.PhoneNumber{
+	{Number: "1234", Type: pb.PhoneType_HOME},
+	{Number: "4321", Type: pb.PhoneType_WORK},
+	{Number: "4312", Type: pb.PhoneType_MOBILE},
+}
+
+var persons = []pb.Person{
+	{Name: "Juan", Id: 1, Email: "juan@gmail.com", Phones: phones},
+	{Name: "Gabriel", Id: 2, Email: "gabriel@gmail.com", Phones: phones},
+	{Name: "Albert", Id: 3, Email: "albert@gmail.com", Phones: phones},
+	{Name: "Mark", Id: 4, Email: "mark@gmail.com", Phones: phones},
+	{Name: "Brian", Id: 5, Email: "brian@gmail.com", Phones: phones},
+	{Name: "Kevin", Id: 6, Email: "kevin@gmail.com", Phones: phones},
 }
