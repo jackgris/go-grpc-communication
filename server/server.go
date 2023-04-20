@@ -76,9 +76,16 @@ func (s *PersonGuideServer) RecordPersons(stream pb.PersonGuide_RecordPersonsSer
 			s.savedPersons = append(s.savedPersons, lastPerson)
 		}
 		if err == io.EOF {
-			return stream.SendAndClose(&pb.AddressBook{
-				People: s.savedPersons,
-			})
+			// Don't do this in production this is only for example propose
+			p := pb.Person{
+				Name:   "Another part in the world",
+				Id:     11,
+				Email:  "anotherpartintheworld@gmail.com",
+				Phones: phones,
+			}
+
+			s.addressbook["book"][0].People = append(s.addressbook["book"][0].People, &p)
+			return stream.SendAndClose(s.addressbook["book"][0])
 		}
 		if err != nil {
 			return err
@@ -117,6 +124,7 @@ func (s *PersonGuideServer) RoutePhones(stream pb.PersonGuide_RoutePhonesServer)
 func (s *PersonGuideServer) loadFeatures(filePath string) {
 	fmt.Println("You could load data from the filepath: ", filePath)
 	s.savedPersons = exampleData
+	s.addressbook["book"] = exampleAdressBook
 }
 
 func newServer() *PersonGuideServer {
@@ -171,4 +179,8 @@ var exampleData = []*pb.Person{
 	{Name: "May", Id: 8, Email: "may@gmail.com", Phones: phones},
 	{Name: "Rosario", Id: 9, Email: "rosario@gmail.com", Phones: phones},
 	{Name: "Argentina", Id: 10, Email: "argentina@gmail.com", Phones: phones},
+}
+
+var exampleAdressBook = []*pb.AddressBook{
+	{People: exampleData},
 }
