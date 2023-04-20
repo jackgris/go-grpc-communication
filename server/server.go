@@ -1,7 +1,7 @@
 // Package main implements a simple gRPC server that demonstrates how to use gRPC-Go libraries
 // to perform unary, client streaming, server streaming and full duplex RPCs.
 //
-// It implements the route guide service whose definition can be found in routeguide/route_guide.proto.
+// It implements the person guide service whose definition can be found in personguide/person_guide.proto.
 package main
 
 import (
@@ -32,16 +32,16 @@ var (
 	port       = flag.Int("port", 50051, "The server port")
 )
 
-type routeGuideServer struct {
+type PersonGuideServer struct {
 	pb.UnimplementedPersonGuideServer
 	savedPersons []*pb.Person // read-only after initialized
 
-	mu          sync.Mutex // protects routeNotes
-	routeAdress map[string][]*pb.AddressBook
+	mu          sync.Mutex // protects addressbook
+	addressbook map[string][]*pb.AddressBook
 }
 
-// GetFeature returns the feature at the given point.
-func (s *routeGuideServer) GetPhone(ctx context.Context, person *pb.Person) (*pb.PhoneNumber, error) {
+// GetPhone returns the phone at the given person.
+func (s *PersonGuideServer) GetPhone(ctx context.Context, person *pb.Person) (*pb.PhoneNumber, error) {
 	for _, p := range s.savedPersons {
 		if p.Id == person.Id {
 			return p.GetPhones()[0], nil
@@ -51,8 +51,8 @@ func (s *routeGuideServer) GetPhone(ctx context.Context, person *pb.Person) (*pb
 	return &pb.PhoneNumber{}, errors.New("Not found person")
 }
 
-// ListFeatures lists all features contained within the given bounding Rectangle.
-func (s *routeGuideServer) ListPersons(adress *pb.Adress, stream pb.PersonGuide_ListPersonsServer) error {
+// ListPersons lists all persons contained within the given adress.
+func (s *PersonGuideServer) ListPersons(adress *pb.Adress, stream pb.PersonGuide_ListPersonsServer) error {
 	fmt.Println("In list persons with adress: ", adress)
 	for _, person := range s.savedPersons {
 		if err := stream.Send(person); err != nil {
@@ -62,12 +62,10 @@ func (s *routeGuideServer) ListPersons(adress *pb.Adress, stream pb.PersonGuide_
 	return nil
 }
 
-// RecordRoute records a route composited of a sequence of points.
+// RecordPersons records a list of sequence of persons.
 //
-// It gets a stream of points, and responds with statistics about the "trip":
-// number of points,  number of known features visited, total distance traveled, and
-// total time spent.
-func (s *routeGuideServer) RecordPersons(stream pb.PersonGuide_RecordPersonsServer) error {
+// It gets a stream of persons, and responds with the "adress book"
+func (s *PersonGuideServer) RecordPersons(stream pb.PersonGuide_RecordPersonsServer) error {
 	var lastPerson *pb.Person
 	for {
 		person, err := stream.Recv()
@@ -88,9 +86,9 @@ func (s *routeGuideServer) RecordPersons(stream pb.PersonGuide_RecordPersonsServ
 	}
 }
 
-// RouteChat receives a stream of message/location pairs, and responds with a stream of all
-// previous messages at each of those locations.
-func (s *routeGuideServer) RoutePhones(stream pb.PersonGuide_RoutePhonesServer) error {
+// RoutePhones receives a stream of message/persons data, and responds with a stream of all
+// phone numbers at each of those persons.
+func (s *PersonGuideServer) RoutePhones(stream pb.PersonGuide_RoutePhonesServer) error {
 	for {
 		person, err := stream.Recv()
 		if err == io.EOF {
@@ -115,14 +113,14 @@ func (s *routeGuideServer) RoutePhones(stream pb.PersonGuide_RoutePhonesServer) 
 	}
 }
 
-// loadFeatures loads features from a JSON file or database.
-func (s *routeGuideServer) loadFeatures(filePath string) {
-	fmt.Println("In future we can load data from the filepath: ", filePath)
+// loadFeatures could loads features from a JSON file or database, now is only for show one way to do this.
+func (s *PersonGuideServer) loadFeatures(filePath string) {
+	fmt.Println("You could load data from the filepath: ", filePath)
 	s.savedPersons = exampleData
 }
 
-func newServer() *routeGuideServer {
-	s := &routeGuideServer{routeAdress: make(map[string][]*pb.AddressBook)}
+func newServer() *PersonGuideServer {
+	s := &PersonGuideServer{addressbook: make(map[string][]*pb.AddressBook)}
 	s.loadFeatures(*jsonDBFile)
 	return s
 }
@@ -169,4 +167,8 @@ var exampleData = []*pb.Person{
 	{Name: "Mark", Id: 4, Email: "mark@gmail.com", Phones: phones},
 	{Name: "Brian", Id: 5, Email: "brian@gmail.com", Phones: phones},
 	{Name: "Kevin", Id: 6, Email: "kevin@gmail.com", Phones: phones},
+	{Name: "Ryan", Id: 7, Email: "ryan@gmail.com", Phones: phones},
+	{Name: "May", Id: 8, Email: "may@gmail.com", Phones: phones},
+	{Name: "Rosario", Id: 9, Email: "rosario@gmail.com", Phones: phones},
+	{Name: "Argentina", Id: 10, Email: "argentina@gmail.com", Phones: phones},
 }
