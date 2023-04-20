@@ -1,7 +1,7 @@
 // Package main implements a simple gRPC client that demonstrates how to use gRPC-Go libraries
 // to perform unary, client streaming, server streaming and full duplex RPCs.
 //
-// It interacts with the route guide service whose definition can be found in routeguide/route_guide.proto.
+// It interacts with the person guide service whose definition can be found in personguide/person_guide.proto.
 package main
 
 import (
@@ -25,7 +25,7 @@ var (
 	serverHostOverride = flag.String("server_host_override", "x.test.example.com", "The server name used to verify the hostname returned by the TLS handshake")
 )
 
-// printFeature gets the feature for the given point.
+// printPhone get the phone from the person with send.
 func printPhone(client pb.PersonGuideClient, person *pb.Person) {
 	log.Printf("Getting phone from person %s", person.GetName())
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -37,7 +37,7 @@ func printPhone(client pb.PersonGuideClient, person *pb.Person) {
 	log.Println(phone)
 }
 
-// printFeatures lists all the features within the given bounding Rectangle.
+// printPersons lists all the persons in same adress.
 func printPersons(client pb.PersonGuideClient, adress *pb.Adress) {
 	log.Printf("Looking for persons in adress %s", adress.GetName())
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -59,7 +59,7 @@ func printPersons(client pb.PersonGuideClient, adress *pb.Adress) {
 	}
 }
 
-// runRecordRoute sends a sequence of points to server and expects to get a RouteSummary from server.
+// runRecordPersons sends a sequence of persons to server and expects to get a summary of all persons from server.
 func runRecordPersons(client pb.PersonGuideClient) {
 	log.Printf("Traversing %d persons.", len(persons))
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -80,7 +80,7 @@ func runRecordPersons(client pb.PersonGuideClient) {
 	log.Printf("AdressBook summary: %v", reply)
 }
 
-// runRouteChat receives a sequence of route notes, while sending notes for various locations.
+// runRoutePhones receives a sequence of route phones, while sending a list of persons.
 func runRoutePhones(client pb.PersonGuideClient) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -91,7 +91,7 @@ func runRoutePhones(client pb.PersonGuideClient) {
 	waitc := make(chan struct{})
 	go func() {
 		for {
-			in, err := stream.Recv()
+			phone, err := stream.Recv()
 			if err == io.EOF {
 				// read done.
 				close(waitc)
@@ -100,7 +100,7 @@ func runRoutePhones(client pb.PersonGuideClient) {
 			if err != nil {
 				log.Fatalf("client.RoutePhones failed: %v", err)
 			}
-			log.Printf("Got phone %s type %v", in.Number, in.Type)
+			log.Printf("Got phone %s type %v", phone.Number, phone.Type)
 		}
 	}()
 	for p := range persons {
@@ -108,7 +108,8 @@ func runRoutePhones(client pb.PersonGuideClient) {
 			log.Fatalf("client.RoutePhones: stream.Send(%v) failed: %v", &persons[p], err)
 		}
 	}
-	stream.CloseSend()
+	// For now we don't check errors, don't do this in production
+	_ = stream.CloseSend()
 	<-waitc
 }
 
@@ -134,7 +135,6 @@ func main() {
 	}
 	defer conn.Close()
 	client := pb.NewPersonGuideClient(conn)
-	// https://protobuf.dev/getting-started/gotutorial/
 
 	runRecordPersons(client)
 
