@@ -1,9 +1,6 @@
 syntax = "proto3";
 
 option go_package = "github.com/jackgris/go-grpc-communication/personguide";
-// option java_multiple_files = true;
-// option java_package = "io.grpc.examples.routeguide";
-// option java_outer_classname = "RouteGuideProto";
 
 package personguide;
 
@@ -13,30 +10,29 @@ import "google/protobuf/timestamp.proto";
 service PersonGuide {
   // A simple RPC.
   //
-  // Obtains the first phone saved at the given person.
+  // Obtains the PhoneNumber from the given Person
   //
-  // A feature with an empty name is returned if there's no feature at the given
-  // position.
+  // A phone with an empty number is returned if there's no phone at the given
+  // person.
   rpc GetPhone(Person) returns (PhoneNumber) {}
 
   // A server-to-client streaming RPC.
   //
-  // Obtains the Features available within the given Rectangle.  Results are
+  // Obtains the Persons related to the adress.  Results are
   // streamed rather than returned at once (e.g. in a response message with a
-  // repeated field), as the rectangle may cover a large area and contain a
-  // huge number of features.
+  // repeated field).
   rpc ListPersons(Adress) returns (stream Person) {}
 
   // A client-to-server streaming RPC.
   //
-  // Accepts a stream of Points on a route being traversed, returning a
-  // RouteSummary when traversal is completed.
+  // Accepts a stream of Persons on a route being traversed, returning a
+  // AddressBook when traversal is completed.
   rpc RecordPersons(stream Person) returns (AddressBook) {}
 
   // A Bidirectional streaming RPC.
   //
-  // Accepts a stream of RouteNotes sent while a route is being traversed,
-  // while receiving other RouteNotes (e.g. from other users).
+  // Accepts a stream of Person sent while a route is being traversed,
+  // while receiving Phone Numbers (e.g. from other users).
   rpc RoutePhones(stream Person) returns (stream PhoneNumber) {}
 }
 
